@@ -2,6 +2,9 @@ package main
 
 import (
 	commands "ccwc/cmd"
+	"fmt"
+	"io"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -9,20 +12,47 @@ import (
 var rootCmd *cobra.Command
 
 func init() {
-	var flag string
 	rootCmd = &cobra.Command{
 		Use:   "ccwc",
 		Short: "Run custom wc cli tool",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Flags().Visit(commands.EvaluateFlag)
+			var results []string
+			if len(args) == 0 {
+				var fileContent []byte
+				fileContent, err := io.ReadAll(os.Stdin)
+				if err != nil {
+					fmt.Println("Error:\n", err)
+					os.Exit(1)
+				}
+				results = commands.Evaluate(cmd, fileContent)
+				for i := 0; i < len(results); i++ {
+					fmt.Print(results[i] + " ")
+				}
+				fmt.Println()
+			} else {
+				filePath := args[0]
+				fileContent, err := os.ReadFile(filePath)
+				if err != nil {
+					fmt.Println("Error:\n", err)
+					os.Exit(2)
+				}
+				results = commands.Evaluate(cmd, fileContent)
+				for i := 0; i < len(results); i++ {
+					fmt.Print(results[i] + " ")
+				}
+				fmt.Println(filePath)
+			}
 		},
 	}
-	rootCmd.Flags().StringVarP(&flag, "bytes", "c", "a", "Count number of bytes in the file")
-	rootCmd.Flags().StringVarP(&flag, "lines", "l", "a", "Count number of lines in the file")
-	rootCmd.Flags().StringVarP(&flag, "words", "w", "a", "Count number of words in the file")
-	rootCmd.Flags().StringVarP(&flag, "multibytes", "m", "a", "Count number of multibytes in the file")
+	rootCmd.Flags().BoolP("bytes", "c", false, "Count number of bytes in the file")
+	rootCmd.Flags().BoolP("lines", "l", false, "Count number of lines in the file")
+	rootCmd.Flags().BoolP("words", "w", false, "Count number of words in the file")
+	rootCmd.Flags().BoolP("multibytes", "m", false, "Count number of multibytes in the file")
 }
 
 func main() {
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

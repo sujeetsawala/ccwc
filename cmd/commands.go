@@ -1,117 +1,52 @@
 package commands
 
 import (
-	"bufio"
-	"fmt"
-	"os"
+	"bytes"
 	"strconv"
 
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 )
 
-var commandMap map[string]func(string) ([]string, error)
+func Evaluate(cmd *cobra.Command, fileContent []byte) []string {
+	var results []string
+	results = count(fileContent)
+	//results = append(results, countWords(bufio.NewScanner(reader))...)
+	//results = append(results, countMultibytes(bufio.NewScanner(reader))...)
 
-func init() {
-	commandMap = make(map[string]func(string) ([]string, error))
-	commandMap["c"] = countBytes
-	commandMap["w"] = countWords
-	commandMap["l"] = countLines
-	commandMap["m"] = countMultiBytes
+	var filteredResults []string
+	var flagSet bool = false
+	if cmd.Flags().Changed("bytes") {
+		flagSet = true
+		filteredResults = append(filteredResults, results[0])
+	}
+	if cmd.Flags().Changed("words") {
+		flagSet = true
+		filteredResults = append(filteredResults, results[2])
+	}
+	if cmd.Flags().Changed("lines") {
+		flagSet = true
+		filteredResults = append(filteredResults, results[1])
+	}
+	if cmd.Flags().Changed("multibytes") {
+		flagSet = true
+		filteredResults = append(filteredResults, results[3])
+	}
+	if !flagSet {
+		return results
+	}
+	return filteredResults
 }
 
-func EvaluateFlag(fp *pflag.Flag) {
-	var results []string
-	var err error
-	val, ok := commandMap[fp.Shorthand]
-	if ok {
-		results, err = val(fp.Value.String())
-	} else {
-		results, err = countAll(fp.Value.String())
-	}
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		for i := 0; i < len(results); i++ {
-			fmt.Print(results[i] + " ")
+func count(fileContent []byte) []string {
+	var lineCount int = 0
+	var byteCount int = len(fileContent)
+	var wordCount int = len(bytes.Fields(fileContent))
+	var charCount int = len(bytes.Runes(fileContent))
+
+	for i := 0; i < len(fileContent); i++ {
+		if string(fileContent[i]) == "\n" {
+			lineCount++
 		}
-		fmt.Println(fp.Value.String())
 	}
-}
-
-func countBytes(filePath string) ([]string, error) {
-	file, _ := os.Open(filePath)
-	sc := bufio.NewScanner(file)
-	sc.Split(bufio.ScanBytes)
-	var results []string
-	var count int = 0
-	for sc.Scan() {
-		count = count + 1
-	}
-	results = append(results, strconv.Itoa(count))
-	return results, nil
-}
-
-func countMultiBytes(filePath string) ([]string, error) {
-	file, _ := os.Open(filePath)
-	sc := bufio.NewScanner(file)
-	sc.Split(bufio.ScanRunes)
-	var count int = 0
-	var results []string
-	for sc.Scan() {
-		count = count + 1
-	}
-	results = append(results, strconv.Itoa(count))
-	return results, nil
-}
-
-func countWords(filePath string) ([]string, error) {
-	file, _ := os.Open(filePath)
-	sc := bufio.NewScanner(file)
-	sc.Split(bufio.ScanWords)
-	var count int = 0
-	var results []string
-	for sc.Scan() {
-		count = count + 1
-	}
-	results = append(results, strconv.Itoa(count))
-	return results, nil
-}
-
-func countLines(filePath string) ([]string, error) {
-	file, _ := os.Open(filePath)
-	sc := bufio.NewScanner(file)
-	sc.Split(bufio.ScanLines)
-	var results []string
-	var count int = 0
-	for sc.Scan() {
-		count = count + 1
-	}
-	results = append(results, strconv.Itoa(count))
-	return results, nil
-}
-
-func countAll(filePath string) ([]string, error) {
-	var results []string
-
-	countBytes, err := countBytes(filePath)
-	if err != nil {
-		return nil, err
-	} else {
-		results = append(results, countBytes[0])
-	}
-
-	countWords, err := countWords(filePath)
-	if err != nil {
-		return nil, err
-	} else {
-		results = append(results, countWords[0])
-	}
-
-	countLines, err := countLines(filePath)
-	if err != nil {
-		return nil, err
-	} else {
-		results = append(results, countLines[0])
-	}
-	return results, nil
+	return []string{strconv.Itoa(byteCount), strconv.Itoa(lineCount), strconv.Itoa(wordCount), strconv.Itoa(charCount)}
 }
