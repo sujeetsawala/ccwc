@@ -2,7 +2,7 @@
 Custom clone of `wc` cli tool in golang
 
 # How to Run
-1. Clone the git repository
+1. Clone the git repository with the command `git clone git@github.com:sujeetsawala/ccwc.git`
 2. Run `go mod tidy`
 3. Run `go install ccwc`
 4. The binaries will be present in the GOPATH
